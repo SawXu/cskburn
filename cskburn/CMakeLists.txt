@@ -48,3 +48,7 @@ target_compile_options(
 )
 
 install(TARGETS ${PROJECT_NAME} DESTINATION bin)
+
+add_executable(utils_test tests/utils_test.c src/utils.c)
+target_include_directories(utils_test PRIVATE src)
+add_test(NAME utils_test COMMAND utils_test)
