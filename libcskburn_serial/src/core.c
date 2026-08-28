@@ -69,6 +69,7 @@ static const struct {
 						.info =
 								{
 										.load_addr = 0x20050000,
+										.supports_flash_lock = true,
 										.requires_sys_clk = true,
 										.retry_loader_blocks = true,
 								},
