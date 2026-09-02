@@ -264,7 +264,7 @@ check_command(cskburn_serial_device_t *dev, uint8_t op, uint16_t in_len, uint32_
 {
 	struct {
 		uint8_t error;
-		uint8_t code;
+		uint8_t status;
 	} out = {0};
 	uint16_t out_len = 0;
 
@@ -279,8 +279,9 @@ check_command(cskburn_serial_device_t *dev, uint8_t op, uint16_t in_len, uint32_
 	}
 
 	if (out.error) {
-		LOGD("DEBUG: Unexpected device response of command %02X: 0x%02X", op, out.code);
-		return out.code;
+		LOGD("DEBUG: Unexpected device response of command %02X: error=0x%02X, status=0x%02X",
+				op, out.error, out.status);
+		return out.status;
 	} else {
 		return 0;
 	}
