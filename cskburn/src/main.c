@@ -1155,6 +1155,43 @@ serial_connect(cskburn_serial_device_t *dev, cskburn_reset_strategy_t *out_strat
 	return ret;
 }
 
+static uint32_t
+verify_discard_write(writer_t *writer, const uint8_t *buf, uint32_t size)
+{
+	(void)writer;
+	(void)buf;
+	return size;
+}
+
+static void
+verify_discard_close(writer_t **writer)
+{
+	if (writer != NULL) {
+		*writer = NULL;
+	}
+}
+
+static int
+serial_verify_readback(cskburn_serial_device_t *dev, cskburn_serial_target_t target,
+		uint32_t addr, uint32_t size, uint8_t *md5,
+		void (*on_progress)(int32_t read_bytes, uint32_t total_bytes))
+{
+	writer_t writer = {
+			.write = verify_discard_write,
+			.close = verify_discard_close,
+	};
+	uint8_t discarded_md5[MD5_SIZE] = {0};
+
+	verify_install_writer(&writer);
+	int ret = cskburn_serial_read(dev, target, addr, size, &writer, NULL, on_progress);
+	if (ret != 0) {
+		verify_finish_writer(&writer, discarded_md5);
+		return ret;
+	}
+
+	return verify_finish_writer(&writer, md5);
+}
+
 static int
 serial_burn(cskburn_partition_t *parts, int parts_cnt)
 {
@@ -1536,8 +1573,15 @@ serial_burn(cskburn_partition_t *parts, int parts_cnt)
 				ret = -CSKBURN_ERR_VERIFY_LOCAL_MD5_FAILED;
 				goto err_write;
 			}
-			if ((ret = cskburn_serial_verify(dev, options.target, parts[i].addr,
-						 parts[i].reader->size, flash_md5)) != 0) {
+			if (options.chip->serial == CHIP_VENUSA) {
+				ret = serial_verify_readback(dev, options.target, parts[i].addr,
+						parts[i].reader->size, flash_md5,
+						options.progress ? print_progress : NULL);
+			} else {
+				ret = cskburn_serial_verify(dev, options.target, parts[i].addr,
+						parts[i].reader->size, flash_md5);
+			}
+			if (ret != 0) {
 				ERR_RET(ret, "partition %d", i + 1);
 				goto err_write;
 			}
